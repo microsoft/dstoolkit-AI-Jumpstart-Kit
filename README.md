@@ -14,7 +14,7 @@ The package provides repeatable IP and a sample [Semantic Kernel](https://learn.
 
 # Project Wiki
 
-Project [Wiki]](https://github.com/microsoft/dstoolkit-AI-Jumpstart-Kit/wiki)
+Project [Wiki](https://github.com/microsoft/dstoolkit-AI-Jumpstart-Kit/wiki)
 
 # C# WebAPI SK Connector
 
