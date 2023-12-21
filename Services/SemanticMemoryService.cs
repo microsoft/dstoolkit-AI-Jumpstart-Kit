@@ -24,9 +24,8 @@
 #pragma warning disable SKEXP0011, SKEXP0052, SKEXP0003 // SemanticTextMemory is For Evaluation and Testing Purpose Only
 
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Plugins.Memory;
-using Microsoft.SemanticKernel.Connectors.AI.OpenAI;
 using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 using SK_Connector.Options;
 
@@ -49,7 +48,6 @@ internal static class SemanticMemoryService
             if (semanticMemoryOptions.Type == AIServiceOptions.AIServiceType.AzureOpenAI)
                 memoryBuilder.WithAzureOpenAITextEmbeddingGeneration(
                     semanticMemoryOptions.Models.Embedding,
-                    "model-id",
                     semanticMemoryOptions.Endpoint,
                     semanticMemoryOptions.Key);
             else

@@ -21,25 +21,23 @@
 //SOFTWARE.
 //
 
-#pragma warning disable  SKEXP0052, SKEXP0003  // SemanticTextMemory is For Evaluation and Testing Purpose Only
-
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Memory;
-using Microsoft.SemanticKernel.Plugins.Memory;
-using Microsoft.SemanticKernel;
-using SK_Connector.Options;
-using SK_Connector.Services;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using Microsoft.SemanticKernel;
+
+using SK_Connector.Options;
+using SK_Connector.Services;
 
 namespace SK_Connector.Utils;
 
 public static class Extensions
 {
     // Register the skills with the kernel.
+    // Add Skills from Storage Account
     public static Task RegisterKernelSkills(IServiceProvider sp, Kernel kernel)
     {
-        // Add Skills from Storage Account
+        // Prompt Template Factory
         KernelPromptTemplateFactory factory = new();
 
         // Services  Options
@@ -54,13 +52,12 @@ public static class Extensions
         // Get the file tree from the storage account
         List<string[]> filetree = storage.GetItemList(storageConnection, "");
 
-        // Create a list of plugins
-        List<KernelPlugin> plugins = new();
+        // plugin Name, function Name, file Name
+        SortedDictionary<string, SortedDictionary<string, string>> plugintree = new();
 
-        // Iterate and register the skills with the kernel.
+        // Create a list of plugins from the storage account
         foreach (var item in filetree!)
         {
-            // The file tree is a list of string arrays with the following structure:
             var pluginName = item[0];   // Directory Name
             var functionName = item[1];
             var fileName = item[2];
@@ -71,54 +68,59 @@ public static class Extensions
             // Validate skill name
             ValidSkillName(pluginName);
 
-            // Prepare the path to the prompt file
-            var promptPath = Path.Combine(pluginName, functionName, "skprompt.txt");
+            // Add to the sorted dictionary
+            if (!plugintree.ContainsKey(pluginName))
+                plugintree.Add(pluginName, new SortedDictionary<string, string>());
 
-            // Prepare the path to load prompt configuration. Note: the configuration is optional.
-            var configPath = Path.Combine(pluginName, functionName, "config.json");
-
-            PromptTemplateConfig promptConfig = new();
-            if (storage.FileExists(storageConnection, configPath))
-            {
-                var confjson = storage.ReadString(storageConnection, configPath);
-                if (!string.IsNullOrWhiteSpace(confjson))
-                    promptConfig = PromptTemplateConfig.FromJson(confjson);
-            }
-            promptConfig.Name = functionName;
-
-            // Load prompt template
-            string? promptTemplate = storage.ReadString(storageConnection, promptPath);
-
-            // If the prompt template is empty, skip this skill.
-            if (string.IsNullOrWhiteSpace(promptTemplate))
-                continue;
-
-            promptConfig.Template = promptTemplate;
-
-            // Create the prompt template instance
-            var promptTemplateInstance = factory.Create(promptConfig);
-
-            // Add to the list of plugins to register with the kernel.
-            if (promptTemplateInstance != null)
-            {
-                if (!plugins.Any(p => p.Name == pluginName))
-                    plugins.Add(new(pluginName));
-
-                plugins.Where(p => p.Name == pluginName).FirstOrDefault()?.AddFunction(KernelFunctionFactory.CreateFromPrompt(promptTemplateInstance, promptConfig));
-            }
+            if (!plugintree[pluginName].ContainsKey(functionName))
+                plugintree[pluginName].Add(functionName,fileName);
         }
 
-        // Clear the plugins from the kernel.
-        kernel.Plugins.Clear();
+        // Now loop thru the dictionary and create the plugins
+        foreach(var plugin in plugintree)
+        {
+            var pluginName = plugin.Key;
+            var functions = new List<KernelFunction>();
 
-        // Register the plugins with the kernel.
-        foreach (var plugin in plugins)
-            kernel.Plugins.Add(plugin);
+            foreach(var function in plugin.Value)
+            {
+                var functionName = function.Key;
 
-        // Add the semantic text memory plugin
-        var memory = sp.GetRequiredService<ISemanticTextMemory>();
-        kernel.ImportPluginFromObject(new TextMemoryPlugin(memory));
+                // Prepare the path to the prompt file
+                var promptPath = Path.Combine(pluginName, functionName, "skprompt.txt");
 
+                // Prepare the path to load prompt configuration. Note: the configuration is optional.
+                var configPath = Path.Combine(pluginName, functionName, "config.json");
+
+                PromptTemplateConfig promptConfig = new();
+                if (storage.FileExists(storageConnection, configPath))
+                {
+                    var confjson = storage.ReadString(storageConnection, configPath);
+                    if (!string.IsNullOrWhiteSpace(confjson))
+                        promptConfig = PromptTemplateConfig.FromJson(confjson);
+                }
+                promptConfig.Name = functionName;
+
+                // Load prompt template
+                string? promptTemplate = storage.ReadString(storageConnection, promptPath);
+
+                // If the prompt template is empty, skip this skill.
+                if (string.IsNullOrWhiteSpace(promptTemplate))
+                    continue;
+
+                promptConfig.Template = promptTemplate;
+
+                // Create the prompt template instance
+                var promptTemplateInstance = factory.Create(promptConfig);
+
+                // Add to the list of plugins to register with the kernel.
+                if (promptTemplateInstance != null)
+                    functions.Add(KernelFunctionFactory.CreateFromPrompt(promptTemplateInstance, promptConfig));
+            }
+
+            // Add the plugin to the kernel
+            kernel.Plugins.Add(KernelPluginFactory.CreateFromFunctions(pluginName, null, functions));
+        }
         return Task.CompletedTask;
     }
 

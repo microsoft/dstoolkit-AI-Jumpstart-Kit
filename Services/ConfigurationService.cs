@@ -21,10 +21,6 @@
 //SOFTWARE.
 //
 
-using System;
-using System.Reflection;
-using Azure.Identity;
-
 namespace SK_Connector.Services;
 
 internal static class ConfigurationService

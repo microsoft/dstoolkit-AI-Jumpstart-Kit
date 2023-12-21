@@ -21,8 +21,12 @@
 //SOFTWARE.
 //
 
+#pragma warning disable  SKEXP0052, SKEXP0003  // SemanticTextMemory is For Evaluation and Testing Purpose Only
+
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Plugins.Memory;
 
 using SK_Connector.Options;
 using SK_Connector.Utils;
@@ -42,13 +46,12 @@ internal static class SemanticKernelService
             var semanticKernelOptions = sp.GetRequiredService<IOptions<AIServiceOptions>>().Value;
 
             // Create the kernel builder
-            KernelBuilder builder = new();
+            var builder = Kernel.CreateBuilder();
 
             // Add the Completion endpoint
             if (semanticKernelOptions.Type == AIServiceOptions.AIServiceType.AzureOpenAI)
                 builder.AddAzureOpenAIChatCompletion(
                     semanticKernelOptions.Models.Completion,
-                    "model-id",
                     semanticKernelOptions.Endpoint,
                     semanticKernelOptions.Key);
             else
@@ -61,6 +64,10 @@ internal static class SemanticKernelService
 
             // Register the skills from the storage account with the kernel.
             Extensions.RegisterKernelSkills(sp, kernel);
+
+            // Add the semantic text memory plugin
+            var memory = sp.GetRequiredService<ISemanticTextMemory>();
+            kernel.ImportPluginFromObject(new TextMemoryPlugin(memory));
 
             // Return the kernel
             return kernel;
