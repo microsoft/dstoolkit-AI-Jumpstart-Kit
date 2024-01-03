@@ -14,6 +14,10 @@ The package provides a sample [Semantic Kernel](https://learn.microsoft.com/en-u
 
 The AI Orchestration Jumpstart Kit has proven its effectiveness in various scenarios. For instance, it has facilitated the rapid ramp-up of a new team of developers with minimal experience with the Semantic Kernel. It has also enabled a project team to divide their work effectively between creating Semantic Functions and developing the Web UI. These success stories demonstrate the kit's potential to significantly enhance the efficiency and productivity of AI development teams.
 
+Following involvement in a hackathon project, we were tasked with developing a solution for a Health Clinic Copilot. This system was designed to respond to customer inquiries using a database of medical facts.
+
+Facilitated by the WebAPI in this IP, it allowed our team to divide and conquer different tasks without overlap or conflict. Some team members focused on refining the semantic functions for the AI prompts, while others concentrated on gathering and organizing the medical facts. Importantly, all of this was achieved without the need for Semantic kernel code development.
+
 # Project Wiki
 
 Project [Wiki](https://github.com/microsoft/dstoolkit-AI-Jumpstart-Kit/wiki)
