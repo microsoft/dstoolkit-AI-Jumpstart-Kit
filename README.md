@@ -10,7 +10,9 @@ The package provides a sample [Semantic Kernel](https://learn.microsoft.com/en-u
   - Endpoints for basic SK requests
   - Endpoints for creating more SK semantic functions prompts and configuration files
   - Implementation of an in-memory Vector Database
-  - Reference source code 
+  - Reference source code
+
+The AI Orchestration Jumpstart Kit has proven its effectiveness in various scenarios. For instance, it has facilitated the rapid ramp-up of a new team of developers with minimal experience with the Semantic Kernel. It has also enabled a project team to divide their work effectively between creating Semantic Functions and developing the Web UI. These success stories demonstrate the kit's potential to significantly enhance the efficiency and productivity of AI development teams.
 
 # Project Wiki
 
