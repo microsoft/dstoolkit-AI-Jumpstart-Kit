@@ -1,0 +1,101 @@
+﻿@page "/OpenAI"
+@inject HttpClient httpClient
+@inject IConfiguration Configuration
+
+<h3>OpenAI</h3>
+
+<div class="row mb-3">
+    <FunctionSelector PlugInFunctionSelected="PlugFunctionInSelected" SelectedPlugin="@pluginName" SelectedFunction="@functionName" />
+</div>
+
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="SKPrompt">Input:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="input" rows="10" @bind="input"></textarea>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="result">Result:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="result" rows="10" @bind="result"></textarea>
+    </div>
+</div>
+<div class="row">
+    <div class="col-8">
+        <button class="btn btn-primary mt-2 me-2" @onclick="ExecuteSkill">Execute Skill</button>
+        <button class="btn btn-primary mt-2 me-2" @onclick="ExecuteSkillWithMemory">Execute Skill With Memory</button>
+    </div>
+</div>
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="row mt-3">
+        <div class="col-2">
+            <label class="fw-bold" for="Message">Message:</label>
+        </div>
+        <div class="col-8">
+            <label class="fw-bold" for="message">@message</label>
+        </div>
+    </div>
+}
+
+@code {
+    private string? pluginName;
+    private string? functionName;
+    private string? input;
+    private string? result;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var baseAddress = Configuration["SKBaseAddress"];
+        httpClient.BaseAddress = new Uri(baseAddress);
+    }
+
+    private async Task ExecuteSkill()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/Function/Execute?pluginName={pluginName}&functionName={functionName}&input={input}");
+
+        var response = await httpClient.SendAsync(request);
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        message = "";
+
+        if (response.IsSuccessStatusCode)
+            result = responseString;
+        else
+        {
+            result = "";
+            message = $"Error: {response.StatusCode} {responseString}";
+        }
+    }
+
+    private async Task ExecuteSkillWithMemory()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/Function/ExecuteWithMemory?pluginName={pluginName}&functionName={functionName}&relevance=0.7&input={input}");
+
+        var response = await httpClient.SendAsync(request);
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        message = "";
+
+        if (response.IsSuccessStatusCode)
+            result = responseString;
+        else
+        {
+            result = "";
+            message = $"Error: {response.StatusCode} {responseString}";
+        }
+    }
+
+    private async Task PlugFunctionInSelected(FunctionSelector.PluginInfo pluginInfo)
+    {
+        pluginName = pluginInfo.PluginName;
+        functionName = pluginInfo.FunctionName;
+    }
+}

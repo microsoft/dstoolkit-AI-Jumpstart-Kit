@@ -1,0 +1,147 @@
+﻿@page "/PlugInCRUD"
+@inject HttpClient httpClient
+@inject IConfiguration Configuration
+@using System.Text;
+@using System.Text.Json;
+
+<h3>PlugInCRUD</h3>
+
+<div class="row mb-3">
+    <FunctionSelector PlugInFunctionSelected="PlugFunctionInSelected" SelectedPlugin="@pluginName" SelectedFunction="@functionName" />
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="pluginName">Plugin Name:</label>
+    </div>
+    <div class="col-8">
+        <input class="form-control" id="pluginName" @bind="pluginName" />
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="functionName">Function Name:</label>
+    </div>
+    <div class="col-8">
+        <input class="form-control" id="functionName" @bind="functionName" />
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="SKPrompt">Prompt:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="SKPrompt" rows="10" @bind="SKPrompt"></textarea>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="SKConfigjson">Config JSON:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="SKConfigjson" rows="10" @bind="SKConfigjson"></textarea>
+    </div>
+</div>
+<div class="row">
+    <div class="col-8">
+        <button class="btn btn-primary mt-2 me-2" @onclick="UpSertSkill">UpSert Skill</button>
+        <button class="btn btn-primary mt-2 me-2" @onclick="DeleteSkill">Delete Skill</button>
+    </div>
+</div>
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="row mt-3">
+        <div class="col-2">
+            <label class="fw-bold" for="Message">Message:</label>
+        </div>
+        <div class="col-8">
+            <label class="fw-bold" for="message">@message</label>
+        </div>
+    </div>
+}
+
+@code {
+    private string? pluginName;
+    private string? functionName;
+    private string? SKPrompt;
+    private string? SKConfigjson;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var baseAddress = Configuration["SKBaseAddress"];
+        httpClient.BaseAddress = new Uri(baseAddress);
+    }
+
+    private async Task UpSertSkill()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/SK/Post?pluginName={pluginName}&functionName={functionName}&SKPrompt={SKPrompt}&SKConfigjson={SKConfigjson}");
+
+        var response = await httpClient.SendAsync(request);
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        message = $"Error: {response.StatusCode} {responseString}";
+
+        if (response.IsSuccessStatusCode)
+            message = $"Inserted";
+        else
+            message = $"Error: {response.StatusCode} {responseString}";
+    }
+
+    private async Task RetrieveSkill()
+    {
+        var response = await httpClient.GetAsync($"/SK/Get?pluginName={pluginName}&functionName={functionName}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+
+            var skillData = JsonSerializer.Deserialize<SkillData>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            SKPrompt = skillData.SKPrompt;
+            SKConfigjson = skillData.SKConfig;
+            message = $"";
+        }
+        else
+        {
+            SKPrompt = "";
+            SKConfigjson = "";
+            message = $"Error: {response.StatusCode}";
+        }
+    }
+
+    private async Task DeleteSkill()
+    {
+        var response = await httpClient.DeleteAsync($"/SK/Delete?pluginName={pluginName}&functionName={functionName}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            pluginName = "";
+            functionName = "";
+            SKPrompt = "";
+            SKConfigjson = "";
+            message = $"Deleted";
+        }
+        else
+            message = $"Error: {response.StatusCode}";
+    }
+
+    private Task InsertSkill(MouseEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private class SkillData
+    {
+        public string SKPrompt { get; set; }
+        public string SKConfig { get; set; }
+    }
+
+    private async Task PlugFunctionInSelected(FunctionSelector.PluginInfo pluginInfo)
+    {
+        pluginName = pluginInfo.PluginName;
+        functionName = pluginInfo.FunctionName;
+
+        await RetrieveSkill();
+    }
+}

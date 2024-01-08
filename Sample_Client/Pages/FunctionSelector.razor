@@ -1,0 +1,126 @@
+﻿@page "/FunctionSelector"
+@inject HttpClient httpClient
+@inject IConfiguration Configuration
+
+<div class="row">
+    <div class="col-2">
+        <label class="fw-bold">Plugin and Function:</label>
+    </div>
+    <div class="col-8">
+        @if (!initialized)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <select @bind="selectedPlugin" @oninput="UpdateSelectionPlugInName">
+                @foreach (var plugin in plugins)
+                {
+                    <option value="@plugin.PluginName">@plugin.PluginName</option>
+                }
+            </select>
+
+            <select @bind="selectedFunction" @oninput="UddateSelectionFunctionName">
+                @foreach (var function in allPlugins.Where(p => p.PluginName == selectedPlugin).Select(p => p.FunctionName))
+                {
+                    <option value="@function">@function</option>
+                }
+            </select>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<PluginInfo> PlugInFunctionSelected { get; set; }
+
+    [Parameter]
+    public string? SelectedPlugin { get; set; }
+
+    [Parameter]
+    public string? SelectedFunction { get; set; }
+
+    // Binds
+    private string? selectedPlugin;
+    private string? selectedFunction;
+
+    // Aux Lists
+    private List<PluginInfo> plugins = new List<PluginInfo>();
+    private List<PluginInfo> allPlugins = new List<PluginInfo>();
+
+    private bool initialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var baseAddress = Configuration["SKBaseAddress"];
+        httpClient.BaseAddress = new Uri(baseAddress);
+
+        allPlugins = await httpClient.GetFromJsonAsync<List<PluginInfo>>("/SK/ListPlugins");
+        plugins = allPlugins.Distinct(new PluginInfoComparer()).ToList();
+
+        if(!String.IsNullOrEmpty(SelectedPlugin))
+            selectedPlugin = SelectedPlugin;
+        else
+            selectedPlugin = plugins.FirstOrDefault()?.PluginName;
+
+        if (!String.IsNullOrEmpty(SelectedFunction))
+            selectedFunction = SelectedFunction;
+        else
+            selectedFunction = plugins.FirstOrDefault()?.FunctionName;
+
+        UpdateSelection();
+
+        initialized = true;
+    }
+
+    public class PluginInfo
+    {
+        public string PluginName { get; set; }
+        public string FunctionName { get; set; }
+        public string Description { get; set; }
+    }
+
+    private class PluginInfoComparer : IEqualityComparer<PluginInfo>
+    {
+        public bool Equals(PluginInfo x, PluginInfo y)
+        {
+            if (Object.ReferenceEquals(x, y)) return true;
+
+            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                return false;
+
+            return x.PluginName == y.PluginName;
+        }
+
+        public int GetHashCode(PluginInfo plugin)
+        {
+            if (Object.ReferenceEquals(plugin, null)) return 0;
+
+            int hashPluginName = plugin.PluginName == null ? 0 : plugin.PluginName.GetHashCode();
+
+            return hashPluginName;
+        }
+    }
+
+    // Notify parent about the change
+    private async Task UpdateSelection()
+    {
+        var p = new PluginInfo { PluginName = selectedPlugin, FunctionName = selectedFunction };
+
+        // Notify parent about the change
+        await PlugInFunctionSelected.InvokeAsync(p);
+    }
+
+    // Events
+    private async Task UpdateSelectionPlugInName(ChangeEventArgs e)
+    {
+        selectedPlugin = e.Value.ToString();
+        selectedFunction = allPlugins.Where(p => p.PluginName == selectedPlugin).FirstOrDefault()?.FunctionName;
+        UpdateSelection();
+    }
+    private async Task UddateSelectionFunctionName(ChangeEventArgs e)
+    {
+        selectedFunction = e.Value.ToString();
+        UpdateSelection();
+    }
+    }

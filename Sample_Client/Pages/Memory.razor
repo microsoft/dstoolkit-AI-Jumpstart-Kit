@@ -1,0 +1,76 @@
+﻿@page "/Memory"
+@inject HttpClient httpClient
+@inject IConfiguration Configuration
+@using System.Text;
+@using System.Text.Json;
+
+<h3>Memory</h3>
+
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="MemorySearch">Memory Search:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="memorysearch" rows="2" @bind="memorysearch"></textarea>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-2">
+        <label class="fw-bold" for="serachresult">Result:</label>
+    </div>
+    <div class="col-8">
+        <textarea class="form-control" id="memoryresult" rows="20" @bind="memoryresult"></textarea>
+    </div>
+</div>
+<div class="row">
+    <div class="col-8">
+        <button class="btn btn-primary mt-2 me-2" @onclick="MemoryList">List All</button>
+        <button class="btn btn-primary mt-2 me-2" @onclick="SearchMemory">Search</button>
+    </div>
+</div>
+
+@code {
+    private string? memorysearch;
+    private string? memoryresult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var baseAddress = Configuration["SKBaseAddress"];
+        httpClient.BaseAddress = new Uri(baseAddress);
+    }
+
+    private async Task SearchMemory()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/Memory/Search?Input={memorysearch}");
+
+        var response = await httpClient.SendAsync(request);
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            memoryresult = responseString;
+        }
+        else
+        {
+            memoryresult = $"Error: {response.StatusCode} {responseString}";
+        }
+    }
+
+
+    private async Task MemoryList()
+    {
+        var response = await httpClient.GetAsync($"/Memory/List");
+
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            memoryresult = responseString;
+        }
+        else
+        {
+            memoryresult = $"Error: {response.StatusCode} {responseString}";
+        }
+    }
+}
